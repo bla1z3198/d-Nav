@@ -6,4 +6,6 @@ which contains curves and lines.
 # v1
 
 Last version (v1) have commands.
-![dnav commands](/home/rzr/Pictures/dnav.png)
+* init [filename] - load waypoints from filename.json
+* nav - calculate trajectories from last init
+* exit - exit from dnav
