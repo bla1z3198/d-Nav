@@ -1,8 +1,9 @@
-# d-Nav
+# dnav
 
 Program for creating and calculating trajectories of aircraft. 
 which contains curves and lines.
 
-* 1, 2, 3
+# v1
 
-'go'
+Last version (v1) have commands.
+![dnav commands](/home/rzr/Pictures/dnav.png)
