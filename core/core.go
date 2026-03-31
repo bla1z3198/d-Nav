@@ -1,8 +1,10 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"os"
 )
 
 // Struct for waypoint
@@ -14,7 +16,13 @@ type Point struct {
 	R  float64 `json:"r"`
 }
 
-func Nav(points []Point) { // Func for calculate length of way
+type Upload struct {
+	Line  float64 `json:"line"`
+	Curve float64 `json:"curve"`
+	ID    int     `json:"id"`
+}
+
+func Nav(points []Point) []Upload { // Func for calculate length of way
 	// Previous sin and cos
 	var prev_sin float64
 	var prev_cos float64
@@ -24,6 +32,12 @@ func Nav(points []Point) { // Func for calculate length of way
 	var tangent float64
 	// Distance between tangent points
 	var tangent_line float64
+	// Array for lines and curves
+	upload := make([]Upload, 0)
+	// Length of circle sector
+	var sector float64
+	// Angle between 2 tangent points
+	var gamma float64
 	// Cycle for Points
 	for i := range points {
 		// Calculate length for pairs of points (not single)
@@ -50,35 +64,80 @@ func Nav(points []Point) { // Func for calculate length of way
 			tangent = math.Sqrt(help_distance -
 				(Radius * Radius))
 			// Angle between x axis and tangent
-			angle := math.Asin(Radius/math.Sqrt(help_distance)) +
+			angle0 := math.Asin(Radius/math.Sqrt(help_distance)) +
 				math.Asin(Ay/math.Sqrt(help_distance))
 			// Coordinates of first point
-			x := math.Cos(angle) * tangent
-			y := math.Sin(angle) * tangent
+			x := math.Cos(angle0) * tangent
+			y := math.Sin(angle0) * tangent
 
 			tangent_line = math.Pow((Ax-sin*Radius)-(x), 2) +
 				math.Pow((Ay+cos*Radius)-(y), 2)
+
+			upload = append(upload, Upload{
+				math.Sqrt(help_distance),
+				0,
+				i + 4999, // ID start at 4999
+			})
 		} else {
 			tangent_line = math.Pow((Ax-sin*Radius)-(Ax-prev_sin*Radius), 2) +
 				math.Pow((Ay+cos*Radius)-(Ay+prev_cos*Radius), 2)
 		}
 		// Argument for arccos of gamma angle
 		arg := (1 - (tangent_line / (2 * Radius * Radius)))
-		gamma := math.Acos(arg)
+		gamma = math.Acos(arg)
 		if i > 0 {
 			if (points[i].Y < points[i-1].Y) &&
 				(points[i].Y < points[i+1].Y) {
+				// Gamma for pit points
 				gamma = 6.28319 - gamma
 			}
 		}
 		// Calculate length off circle sector
-		sector := Radius * gamma
+		sector = Radius * gamma
 		// Result length of way
 		result += distanceAB + sector
 		// Previous sin and cos
 		prev_sin = sin
 		prev_cos = cos
-		fmt.Println("Angle =", (gamma*180)/3.1415)
+		// Append to upload
+		upload = append(upload, Upload{
+			distanceAB,
+			sector,
+			i + 5000, // ID start at 5000
+		})
 	}
-	fmt.Println("Result length:", result+tangent)
+	// Add first length
+	result += tangent
+	fmt.Println("Result length:", result)
+	return upload
+}
+
+func UploadIntoFile(filename string, data []Upload) {
+	line_sum := 0.0
+	curve_sum := 0.0
+	total := ""
+	num := 0
+
+	fdata, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("E04 - Can't upload into file...")
+	}
+	f, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("E03 - Can't create/read file...")
+	}
+
+	f.WriteString("dnav flight plan (for simulation use only!)\n")
+
+	num, _ = f.Write(fdata)
+
+	for i := range data {
+		line_sum += data[i].Line
+		curve_sum += data[i].Curve
+	}
+	total = fmt.Sprintf("\nSum of lines = %.4f Sum of curves = %.4f",
+		line_sum, curve_sum)
+	f.WriteString(total)
+
+	fmt.Println("Success! Written", num, "bytes")
 }

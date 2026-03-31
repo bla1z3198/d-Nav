@@ -14,6 +14,7 @@ func HandleCommands() {
 	input := ""
 	splitcom := make([]string, 2)
 	waypoints := make([]core.Point, 0)
+	data := make([]core.Upload, 0)
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -24,14 +25,30 @@ func HandleCommands() {
 
 		switch splitcom[0] {
 		case "init":
-			waypoints = Init(New(), splitcom[1])
+			if len(splitcom) > 1 {
+				waypoints = Init(New(), splitcom[1])
+			} else {
+				fmt.Println("error: you need to type init [filename]")
+			}
 		case "nav":
-			core.Nav(waypoints)
+			data = core.Nav(waypoints)
 		case "exit":
 			fmt.Println("Bye.")
 			os.Exit(0)
+		case "help":
+			fmt.Println("help: init [filename] - init json with filename")
+			fmt.Println("help: nav - calculate trajectory from current json")
+			fmt.Println("help: upload [filename] - upload current flight plan to file")
+			fmt.Println("help: exit - exit from dnav")
+		case "upload":
+			if len(splitcom) > 1 {
+				core.UploadIntoFile(splitcom[1], data)
+			} else {
+				fmt.Println("error: you need to type upload [filename]")
+			}
 		default:
 			fmt.Println("Command", splitcom[0], "not found")
+			fmt.Println("Try to type 'help'")
 		}
 	}
 }

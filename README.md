@@ -3,13 +3,12 @@
 Program for creating and calculating trajectories of aircraft. 
 which contains curves and lines.
 
-# v2
-Last version (v2) have commands and fixed geometry & algebra.
+# v3
+Last version (v3) have commands and ability to upload result into file
 * init [filename] - init json with filename
 * nav - calculate trajectory from current json
+* upload [filename] - upload flight plan into file
 * exit - exit from dnav
-
-* Fixed calculating of first point, and angles of circle sectors.
 
 # Doc
 
