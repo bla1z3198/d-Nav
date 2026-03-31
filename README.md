@@ -10,6 +10,10 @@ Last version (v3) have commands and ability to upload result into file
 * upload [filename] - upload flight plan into file
 * exit - exit from dnav
 
+## You can check work of 'upload' command in upload.txt
+# Examples
+Example of routes stores in data.json and data2.json
+
 # Doc
 
 1 - Core of trajectory engine.
