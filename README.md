@@ -3,8 +3,8 @@
 Program for creating and calculating trajectories of aircraft. 
 which contains curves and lines.
 
-# v3
-Last version (v3) have commands and ability to upload result into file
+# v3.1
+Last version (v3.1) have commands and enhanced system of upload to a file
 * init [filename] - init json with filename
 * nav - calculate trajectory from current json
 * upload [filename] - upload flight plan into file
@@ -55,4 +55,5 @@ Example of routes stores in data.json and data2.json
         - gamma float64 - Angle of circle sector
         - sector float54 - Length of circle sector
 
-        1.2.2 - Geometry...
+        1.2.2 - Geometry... 
+	(there will be explanation in next commit)

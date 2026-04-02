@@ -72,7 +72,7 @@ func Nav(points []Point) []Upload { // Func for calculate length of way
 
 			tangent_line = math.Pow((Ax-sin*Radius)-(x), 2) +
 				math.Pow((Ay+cos*Radius)-(y), 2)
-
+			// Upload first part of way
 			upload = append(upload, Upload{
 				math.Sqrt(help_distance),
 				0,
@@ -113,31 +113,36 @@ func Nav(points []Point) []Upload { // Func for calculate length of way
 }
 
 func UploadIntoFile(filename string, data []Upload) {
+	// Sum of lines
 	line_sum := 0.0
+	// Sum of curves
 	curve_sum := 0.0
+	// Total string
 	total := ""
-	num := 0
-
-	fdata, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println("E04 - Can't upload into file...")
-	}
+	// Create (or re-write) file
 	f, err := os.Create(filename)
 	if err != nil {
 		fmt.Println("E03 - Can't create/read file...")
 	}
 
-	f.WriteString("dnav flight plan (for simulation use only!)\n")
-
-	num, _ = f.Write(fdata)
+	f.WriteString("dnav flight plan (for simulation use only!)\n\n")
+	// Make newline symbol between data[i]
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "")
 
 	for i := range data {
+		encoder.Encode(data[i])
 		line_sum += data[i].Line
 		curve_sum += data[i].Curve
 	}
-	total = fmt.Sprintf("\nSum of lines = %.4f Sum of curves = %.4f",
-		line_sum, curve_sum)
+	// Info string
+	total = fmt.Sprintf("\nSum of lines = %.4f Sum of curves = %.4f\nTotal = %.4f",
+		line_sum, curve_sum, line_sum+curve_sum)
 	f.WriteString(total)
+	// Take number of written symbols
+	num, _ := f.Seek(0, 1)
+	// Close file
+	defer f.Close()
 
 	fmt.Println("Success! Written", num, "bytes")
 }
