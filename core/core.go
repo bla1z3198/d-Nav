@@ -1,10 +1,21 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
+)
+
+// Global variables
+var (
+	sin      float64
+	cos      float64
+	distance float64
+	tangent  float64
+	result   float64
+	sector   float64
+	gamma    float64
+	zero     bool
 )
 
 // Struct for waypoint
@@ -16,74 +27,90 @@ type Point struct {
 	R  float64 `json:"r"`
 }
 
+// Struct for upload
 type Upload struct {
-	Line  float64 `json:"line"`
-	Curve float64 `json:"curve"`
-	ID    int     `json:"id"`
+	FromPoint int
+	ToPoint   int
+	Line      float64
+	Curve     float64
+	Rad       float64
+}
+
+// Struct for tangent points
+type Tangent struct {
+	X1      float64
+	X2      float64
+	Y1      float64
+	Y2      float64
+	Line    float64
+	tangent float64
+}
+
+func (tp *Tangent) TangentPoints(
+	Ax, Ay, Bx, By, R *float64,
+	zero bool) Tangent {
+	// Calculate distance between two points
+	distance = math.Sqrt(math.Pow(*Bx-*Ax, 2) +
+		math.Pow(*By-*Ay, 2))
+	// Caclulate tangent points with previous sin and cos
+	if !zero {
+		tp.X1 = *Ax - sin*(*R)
+		tp.Y1 = *Ay + cos*(*R)
+	}
+	// Calculate first part of way
+	if zero {
+		dt := math.Sqrt((math.Pow(*Ax, 2) +
+			math.Pow(*Ay, 2)))
+		// First tangent line
+		tangent := math.Sqrt(dt*dt -
+			(*R * (*R)))
+		// Angle between x axis and tangent
+		angle := math.Asin(*R/dt) +
+			math.Asin(*Ay/dt)
+		// Coordinates of first point
+		tp.X1 = math.Cos(angle) * tangent
+		tp.Y1 = math.Sin(angle) * tangent
+		tp.Line += dt
+	}
+	// Calculate sin and cos between x-axis and distance line
+	sin = (*By - *Ay) / distance
+	cos = math.Sqrt(1 - sin*sin)
+	// Second pair of tangent points always calculates like this
+	tp.X2 = *Ax - sin*(*R)
+	tp.Y2 = *Ay + cos*(*R)
+	tp.Line = distance
+
+	return *tp
 }
 
 func Nav(points []Point) []Upload { // Func for calculate length of way
-	// Previous sin and cos
-	var prev_sin float64
-	var prev_cos float64
-	// Length of way
-	var result float64
-	// Length of first tangent
-	var tangent float64
-	// Distance between tangent points
-	var tangent_line float64
 	// Array for lines and curves
 	upload := make([]Upload, 0)
-	// Length of circle sector
-	var sector float64
-	// Angle between 2 tangent points
-	var gamma float64
 	// Cycle for Points
 	for i := range points {
 		// Calculate length for pairs of points (not single)
 		if i == len(points)-1 {
 			break
 		}
-		// Define the now and next points
-		Ax := points[i].X
-		Ay := points[i].Y
-		Bx := points[i+1].X
-		By := points[i+1].Y
-		Radius := points[i].R
-		// Calculate length between A and B
-		distanceAB := math.Sqrt(math.Pow(Bx-Ax, 2) +
-			math.Pow(By-Ay, 2))
-
-		sin := (By - Ay) / distanceAB
-		cos := math.Sqrt(1 - sin*sin)
-		// Calculate length between tangent points
+		// Set zero indicator
 		if i == 0 {
-			// Distance between start and first point
-			help_distance := (math.Pow(Ax, 2) + math.Pow(Ay, 2))
-			// First tangent
-			tangent = math.Sqrt(help_distance -
-				(Radius * Radius))
-			// Angle between x axis and tangent
-			angle0 := math.Asin(Radius/math.Sqrt(help_distance)) +
-				math.Asin(Ay/math.Sqrt(help_distance))
-			// Coordinates of first point
-			x := math.Cos(angle0) * tangent
-			y := math.Sin(angle0) * tangent
-
-			tangent_line = math.Pow((Ax-sin*Radius)-(x), 2) +
-				math.Pow((Ay+cos*Radius)-(y), 2)
-			// Upload first part of way
-			upload = append(upload, Upload{
-				math.Sqrt(help_distance),
-				0,
-				i + 4999, // ID start at 4999
-			})
+			zero = true
 		} else {
-			tangent_line = math.Pow((Ax-sin*Radius)-(Ax-prev_sin*Radius), 2) +
-				math.Pow((Ay+cos*Radius)-(Ay+prev_cos*Radius), 2)
+			zero = false
 		}
+		// Create Tangent obj and call function for calculate tangent points
+		t := Tangent{}
+		tp := t.TangentPoints(&points[i].X,
+			&points[i].Y,
+			&points[i+1].X,
+			&points[i+1].Y,
+			&points[i].R,
+			zero)
+		// Calculate tangent line
+		tangent = math.Sqrt(math.Pow(tp.X2-tp.X1, 2) +
+			math.Pow(tp.Y2-tp.Y1, 2))
 		// Argument for arccos of gamma angle
-		arg := (1 - (tangent_line / (2 * Radius * Radius)))
+		arg := (1 - (tangent * tangent / (2 * points[i].R * points[i].R)))
 		gamma = math.Acos(arg)
 		if i > 0 {
 			if (points[i].Y < points[i-1].Y) &&
@@ -92,18 +119,18 @@ func Nav(points []Point) []Upload { // Func for calculate length of way
 				gamma = 6.28319 - gamma
 			}
 		}
-		// Calculate length off circle sector
-		sector = Radius * gamma
+		// Calculate length of circle sector
+		sector = points[i].R * gamma
+		fmt.Println("--sector--", sector)
 		// Result length of way
-		result += distanceAB + sector
-		// Previous sin and cos
-		prev_sin = sin
-		prev_cos = cos
+		result += tp.Line + sector
 		// Append to upload
 		upload = append(upload, Upload{
-			distanceAB,
+			i,
+			i + 1,
+			tp.Line,
 			sector,
-			i + 5000, // ID start at 5000
+			(gamma * 180) / math.Pi,
 		})
 	}
 	// Add first length
@@ -117,6 +144,10 @@ func UploadIntoFile(filename string, data []Upload) {
 	line_sum := 0.0
 	// Sum of curves
 	curve_sum := 0.0
+	// String for lines
+	forward := ""
+	// String for turns
+	turn := ""
 	// Total string
 	total := ""
 	// Create (or re-write) file
@@ -126,17 +157,23 @@ func UploadIntoFile(filename string, data []Upload) {
 	}
 
 	f.WriteString("dnav flight plan (for simulation use only!)\n\n")
-	// Make newline symbol between data[i]
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "")
 
 	for i := range data {
-		encoder.Encode(data[i])
+		// Format strings
+		forward = fmt.Sprintf("Move forward for %.4f metres\n\n",
+			data[i].Line)
+		turn = fmt.Sprintf("Turn left for %.4f degrees\n",
+			data[i].Rad)
+		// Write strings
+		f.WriteString("Point - " + fmt.Sprint(i) + "\n")
+		f.WriteString(turn)
+		f.WriteString(forward)
+
 		line_sum += data[i].Line
 		curve_sum += data[i].Curve
 	}
 	// Info string
-	total = fmt.Sprintf("\nSum of lines = %.4f Sum of curves = %.4f\nTotal = %.4f",
+	total = fmt.Sprintf("\nSum of lines = %.4f metres\nSum of curves = %.4f metres\nTotal = %.4f metres",
 		line_sum, curve_sum, line_sum+curve_sum)
 	f.WriteString(total)
 	// Take number of written symbols

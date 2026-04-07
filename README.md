@@ -1,18 +1,22 @@
 # dnav
-
 Program for creating and calculating trajectories of aircraft. 
 which contains curves and lines.
 
-# v3.1
-Last version (v3.1) have commands and enhanced system of upload to a file
+# v4-alpha (v4a)
+Last version (v4a) have commands and enhanced system of upload to a file
 * init [filename] - init json with filename
 * nav - calculate trajectory from current json
 * upload [filename] - upload flight plan into file
 * exit - exit from dnav
 
+Also was upgraded calculation logic, and now core have
+2 main functions - Tangent points and Nav
+* this an alpha version of dnav, and maybe unstable 
+(latest stable version is v3.1) 
+
 ## You can check work of 'upload' command in upload.txt
 # Examples
-Example of routes stores in data.json and data2.json
+Example of route stores in data.json
 
 # Doc
 
@@ -55,5 +59,15 @@ Example of routes stores in data.json and data2.json
         - gamma float64 - Angle of circle sector
         - sector float54 - Length of circle sector
 
-        1.2.2 - Geometry... 
-	(there will be explanation in next commit)
+        1.2.2 - Geometry
+        - example of trajectory - https://imgur.com/a/OtUPNB9
+        - formulas:
+            * Distance between 2 points 
+            (d = sqrt((x1-x0)^2 +(y1-y0)^2))
+            * Cosinus theoreme
+            (c^2 = a^2 + b^2 - 2ab*cos(alpha))
+            * Pythagorean theorem
+            c^2 = a^2 + b^2
+            * Perpectives (such as)
+            x = math.Cos(angle0) * tangent
+            Thats's all! So simple.
